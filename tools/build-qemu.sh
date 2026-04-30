@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ARCH="${1:?usage: tools/build-qemu.sh <amd64|arm64>}"
+ARCH="${1:?usage: tools/build-qemu.sh <amd64|arm64> [qemu-version]}"
+QEMU_VERSION="${2:-${QEMU_VERSION:-}}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/out}"
 IMAGE="qemu-static-${ARCH}:build"
@@ -27,9 +28,15 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "${OUT_DIR}"
+find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*" -delete
 
 docker build \
     --platform "${PLATFORM}" \
+    --build-arg "ALPINE_VERSION=${ALPINE_VERSION:-3.23.4}" \
+    --build-arg "QEMU_REPO=${QEMU_REPO:-https://gitlab.com/qemu-project/qemu.git}" \
+    --build-arg "QEMU_REF=${QEMU_REF:-${QEMU_VERSION:+v${QEMU_VERSION#v}}}" \
+    --build-arg "QEMU_VERSION=${QEMU_VERSION#v}" \
+    --build-arg "ARTIFACT_SERIAL=${ARTIFACT_SERIAL:-}" \
     --tag "${IMAGE}" \
     "${ROOT_DIR}"
 
@@ -58,12 +65,10 @@ if [[ "${compressed_binary_count}" != "${expected_compressed_binary_count}" ]]; 
     exit 1
 fi
 
-mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*" -o -name "qemu-user-linux-${ARCH}-*.tar.gz" -o -name "qemu-user-linux-${ARCH}-*.tar.zst" \) | sort)
+mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*" | sort)
 
-artifact_names=()
 for artifact in "${artifacts[@]}"; do
     artifact_name="$(basename "${artifact}")"
-    artifact_names+=("${artifact_name}")
 
     if command -v sha256sum >/dev/null 2>&1; then
         (cd "${OUT_DIR}" && sha256sum "${artifact_name}" > "${artifact_name}.sha256")

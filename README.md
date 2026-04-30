@@ -36,6 +36,34 @@ sets, checksums, and attestation bundles.
 The workflow can also be run manually with a `tag_name` input to retry release
 publication for an existing tag.
 
+Manual release runs can also build a specific upstream QEMU version without
+editing the repository. Set `qemu_version` to a stable upstream version such as
+`10.2.2`; the workflow builds `v10.2.2` from
+`https://gitlab.com/qemu-project/qemu.git` unless `qemu_ref` or `qemu_repo` are
+overridden.
+
+## Backfill workflow
+
+`.github/workflows/backfill.yml` discovers stable upstream QEMU release tags
+from `qemu-project/qemu`, ignores release candidates, and selects only the
+latest patch release for each major.minor line. Results are ordered by major
+descending and minor ascending, so a `max_major` of `10` starts with:
+
+```text
+10.0.9
+10.1.5
+10.2.2
+```
+
+The backfill workflow skips versions that already have a release in this
+repository unless `force_rebuild` is set. It uses the same reusable release
+workflow as tag builds, so every backfilled version gets the full binary,
+compressed-binary, archive, checksum, and attestation asset set.
+
+If an older QEMU version cannot be built with the current runtime parameters,
+create a major-specific branch such as `backfill/8.x`, make the minimal build
+recipe changes needed there, and tag only the commits that successfully build.
+
 ## Maintainer note: ZSF qemu fork updates
 
 Edit the following values in `build`:

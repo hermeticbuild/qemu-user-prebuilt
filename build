@@ -21,17 +21,16 @@ case "${HOST_ARCH}" in
         ;;
 esac
 
-ARTIFACT_NAME="qemu"
-# nearest qemu tagged version
-ARTIFACT_BASE_VERSION="11.0.0"
-# when not blank, append another element to version, begin count from 1
-ARTIFACT_SERIAL=
+ARTIFACT_NAME="${ARTIFACT_NAME:-qemu}"
+ARTIFACT_BASE_VERSION="${QEMU_VERSION:-${ARTIFACT_BASE_VERSION:-11.0.0}}"
+ARTIFACT_BASE_VERSION="${ARTIFACT_BASE_VERSION#v}"
+ARTIFACT_SERIAL="${ARTIFACT_SERIAL:-}"
 
 ARTIFACT_VERSION="${ARTIFACT_BASE_VERSION}${ARTIFACT_SERIAL:+.${ARTIFACT_SERIAL}}"
 ARTIFACT_BASENAME="${ARTIFACT_NAME}-${HOST_OS}-${ARTIFACT_ARCH}-${ARTIFACT_VERSION}"
 
-QEMU_REPO="https://codeberg.org/ziglang/qemu.git"
-QEMU_REV=51688f91f6a3ce7b69df1c7b601fcb22fae3a275
+QEMU_REPO="${QEMU_REPO:-https://gitlab.com/qemu-project/qemu.git}"
+QEMU_REF="${QEMU_REF:-${QEMU_REV:-v${ARTIFACT_BASE_VERSION}}}"
 QEMU_BASENAME="${ARTIFACT_NAME}-${ARTIFACT_VERSION}"
 
 WORKDIR() {
@@ -49,7 +48,7 @@ WORKDIR /work/src
 RUN git init "${QEMU_BASENAME}"
 WORKDIR "/work/src/${QEMU_BASENAME}"
 RUN git remote add origin "${QEMU_REPO}"
-RUN git fetch --depth=1 origin "${QEMU_REV}"
+RUN git fetch --depth=1 origin "${QEMU_REF}"
 RUN git checkout --detach FETCH_HEAD
 
 WORKDIR "/work/out/${QEMU_BASENAME}"
