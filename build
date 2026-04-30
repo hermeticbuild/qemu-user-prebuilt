@@ -64,22 +64,8 @@ RUN make "-j$(nproc)"
 RUN make "-j$(nproc)" install
 
 WORKDIR /work/artifact
-
-ARCHIVE_BASENAME="qemu-user-${HOST_OS}-${ARTIFACT_ARCH}-${ARTIFACT_VERSION}"
-ARCHIVE_ROOT="/work/artifact/${ARCHIVE_BASENAME}"
-RUN mkdir -p "${ARCHIVE_ROOT}"
-
-for qemu_binary in "/work/dst/${ARTIFACT_BASENAME}/bin"/qemu-*; do
-    target_arch="$(basename "${qemu_binary}")"
-    target_arch="${target_arch#qemu-}"
-    artifact_binary="qemu-user-${HOST_OS}-${ARTIFACT_ARCH}-${target_arch}"
-
-    RUN cp "${qemu_binary}" "${artifact_binary}"
-    RUN cp "${qemu_binary}" "${ARCHIVE_ROOT}/${artifact_binary}"
-    RUN gzip -c "${artifact_binary}" > "${artifact_binary}.gz"
-    RUN zstd -q -T0 -19 -c "${artifact_binary}" > "${artifact_binary}.zst"
-done
-
-RUN tar --zstd -cf "${ARCHIVE_BASENAME}.tar.zst" -C /work/artifact "${ARCHIVE_BASENAME}"
-RUN tar -czf "${ARCHIVE_BASENAME}.tar.gz" -C /work/artifact "${ARCHIVE_BASENAME}"
-RUN rm -rf "${ARCHIVE_ROOT}"
+RUN /work/tools/package-qemu-artifacts.sh \
+    "/work/dst/${ARTIFACT_BASENAME}" \
+    /work/artifact \
+    "${HOST_OS}" \
+    "${ARTIFACT_ARCH}"

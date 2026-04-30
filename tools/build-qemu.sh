@@ -43,32 +43,46 @@ docker build \
 docker create --name "${CONTAINER}" "${IMAGE}" true >/dev/null
 docker cp "${CONTAINER}:/work/artifact/." "${OUT_DIR}/"
 
-archive_count="$(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*.tar.zst" -o -name "qemu-user-linux-${ARCH}-*.tar.gz" \) | wc -l | tr -d ' ')"
-if [[ "${archive_count}" != "2" ]]; then
-    echo "expected qemu-user-linux-${ARCH}-*.tar.zst and qemu-user-linux-${ARCH}-*.tar.gz archives, found ${archive_count}" >&2
+tar_gz_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*.tar.gz" | wc -l | tr -d ' ')"
+tar_zst_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*.tar.zst" | wc -l | tr -d ' ')"
+if [[ "${tar_gz_count}" == "0" ]] || [[ "${tar_gz_count}" != "${tar_zst_count}" ]]; then
+    echo "expected matching non-empty qemu-user-linux-${ARCH}-<target>.tar.gz and .tar.zst archives; found ${tar_gz_count} gzip and ${tar_zst_count} zstd" >&2
     find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
     exit 1
 fi
 
-binary_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*" ! -name "*.gz" ! -name "*.zst" ! -name "*.tar.*" | wc -l | tr -d ' ')"
-if [[ "${binary_count}" == "0" ]]; then
-    echo "expected at least one qemu-user-linux-${ARCH}-<target> binary" >&2
+unexpected_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*" ! -name "*.tar.gz" ! -name "*.tar.zst" ! -name "*.sha256" | wc -l | tr -d ' ')"
+if [[ "${unexpected_count}" != "0" ]]; then
+    echo "unexpected non-tar qemu-user-linux-${ARCH} artifacts found" >&2
     find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
     exit 1
 fi
 
-compressed_binary_count="$(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*.gz" -o -name "qemu-user-linux-${ARCH}-*.zst" \) ! -name "*.tar.*" | wc -l | tr -d ' ')"
-expected_compressed_binary_count="$((binary_count * 2))"
-if [[ "${compressed_binary_count}" != "${expected_compressed_binary_count}" ]]; then
-    echo "expected ${expected_compressed_binary_count} compressed qemu-user-linux-${ARCH}-<target> binaries, found ${compressed_binary_count}" >&2
-    find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
-    exit 1
-fi
-
-mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*" | sort)
+mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*.tar.gz" -o -name "qemu-user-linux-${ARCH}-*.tar.zst" \) | sort)
 
 for artifact in "${artifacts[@]}"; do
     artifact_name="$(basename "${artifact}")"
+    case "${artifact_name}" in
+        *.tar.gz)
+            expected_member="${artifact_name%.tar.gz}"
+            gzip -t "${artifact}"
+            ;;
+        *.tar.zst)
+            expected_member="${artifact_name%.tar.zst}"
+            zstd -q -t "${artifact}"
+            ;;
+        *)
+            echo "unexpected artifact extension: ${artifact_name}" >&2
+            exit 1
+            ;;
+    esac
+
+    actual_members="$(tar -tf "${artifact}")"
+    if [[ "${actual_members}" != "${expected_member}" ]]; then
+        echo "expected ${artifact_name} to contain exactly ${expected_member}, got:" >&2
+        printf '%s\n' "${actual_members}" >&2
+        exit 1
+    fi
 
     if command -v sha256sum >/dev/null 2>&1; then
         (cd "${OUT_DIR}" && sha256sum "${artifact_name}" > "${artifact_name}.sha256")

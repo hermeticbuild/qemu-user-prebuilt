@@ -35,4 +35,5 @@ RUN apk add bash gzip git tar zstd
 
 WORKDIR /work
 COPY build build
+COPY tools/package-qemu-artifacts.sh tools/package-qemu-artifacts.sh
 RUN /work/build
