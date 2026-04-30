@@ -22,8 +22,8 @@ It is a non-goal to build older versions of QEMU.
 
 Pushing any tag starts `.github/workflows/release.yml`. The workflow builds:
 
-- `qemu-linux-amd64-<version>.tar.xz` on `ubuntu-24.04`
-- `qemu-linux-arm64-<version>.tar.xz` on `ubuntu-24.04-arm`
+- `qemu-linux-amd64-<version>.tar.zst` on `ubuntu-24.04`
+- `qemu-linux-arm64-<version>.tar.zst` on `ubuntu-24.04-arm`
 
 Each build uploads its archive and `.sha256` file as workflow artifacts, attests
 them with GitHub artifact attestations, and publishes the attestation bundle as a

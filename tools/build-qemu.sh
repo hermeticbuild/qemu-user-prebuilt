@@ -36,14 +36,14 @@ docker build \
 docker create --name "${CONTAINER}" "${IMAGE}" true >/dev/null
 docker cp "${CONTAINER}:/work/artifact/." "${OUT_DIR}/"
 
-artifact_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-linux-${ARCH}-*.tar.xz" | wc -l | tr -d ' ')"
+artifact_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-linux-${ARCH}-*.tar.zst" | wc -l | tr -d ' ')"
 if [[ "${artifact_count}" != "1" ]]; then
-    echo "expected exactly one qemu-linux-${ARCH}-*.tar.xz artifact, found ${artifact_count}" >&2
+    echo "expected exactly one qemu-linux-${ARCH}-*.tar.zst artifact, found ${artifact_count}" >&2
     find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
     exit 1
 fi
 
-artifact="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-linux-${ARCH}-*.tar.xz" | sort | head -n 1)"
+artifact="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-linux-${ARCH}-*.tar.zst" | sort | head -n 1)"
 
 if command -v sha256sum >/dev/null 2>&1; then
     (cd "${OUT_DIR}" && sha256sum "$(basename "${artifact}")" > "$(basename "${artifact}").sha256")
