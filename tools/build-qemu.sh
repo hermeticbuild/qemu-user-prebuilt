@@ -36,14 +36,29 @@ docker build \
 docker create --name "${CONTAINER}" "${IMAGE}" true >/dev/null
 docker cp "${CONTAINER}:/work/artifact/." "${OUT_DIR}/"
 
-artifact_count="$(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-linux-${ARCH}-*.tar.zst" -o -name "qemu-linux-${ARCH}-*.tar.gz" \) | wc -l | tr -d ' ')"
-if [[ "${artifact_count}" != "2" ]]; then
-    echo "expected qemu-linux-${ARCH}-*.tar.zst and qemu-linux-${ARCH}-*.tar.gz artifacts, found ${artifact_count}" >&2
+archive_count="$(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*.tar.zst" -o -name "qemu-user-linux-${ARCH}-*.tar.gz" \) | wc -l | tr -d ' ')"
+if [[ "${archive_count}" != "2" ]]; then
+    echo "expected qemu-user-linux-${ARCH}-*.tar.zst and qemu-user-linux-${ARCH}-*.tar.gz archives, found ${archive_count}" >&2
     find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
     exit 1
 fi
 
-mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-linux-${ARCH}-*.tar.zst" -o -name "qemu-linux-${ARCH}-*.tar.gz" \) | sort)
+binary_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-user-linux-${ARCH}-*" ! -name "*.gz" ! -name "*.zst" ! -name "*.tar.*" | wc -l | tr -d ' ')"
+if [[ "${binary_count}" == "0" ]]; then
+    echo "expected at least one qemu-user-linux-${ARCH}-<target> binary" >&2
+    find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
+    exit 1
+fi
+
+compressed_binary_count="$(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*.gz" -o -name "qemu-user-linux-${ARCH}-*.zst" \) ! -name "*.tar.*" | wc -l | tr -d ' ')"
+expected_compressed_binary_count="$((binary_count * 2))"
+if [[ "${compressed_binary_count}" != "${expected_compressed_binary_count}" ]]; then
+    echo "expected ${expected_compressed_binary_count} compressed qemu-user-linux-${ARCH}-<target> binaries, found ${compressed_binary_count}" >&2
+    find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
+    exit 1
+fi
+
+mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-user-linux-${ARCH}-*" -o -name "qemu-user-linux-${ARCH}-*.tar.gz" -o -name "qemu-user-linux-${ARCH}-*.tar.zst" \) | sort)
 
 artifact_names=()
 for artifact in "${artifacts[@]}"; do
@@ -61,5 +76,5 @@ for artifact in "${artifacts[@]}"; do
 done
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-    echo "attestation_name=${artifact_names[0]%.tar.gz}.attestation.jsonl" >> "${GITHUB_OUTPUT}"
+    echo "attestation_name=qemu-user-linux-${ARCH}.attestation.jsonl" >> "${GITHUB_OUTPUT}"
 fi

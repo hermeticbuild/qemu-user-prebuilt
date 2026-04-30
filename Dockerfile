@@ -20,7 +20,7 @@ RUN apk add\
  bison
 
 # required by build
-RUN apk add bash git tar zstd
+RUN apk add bash gzip git tar zstd
 
 WORKDIR /work
 COPY build build

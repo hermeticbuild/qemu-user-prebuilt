@@ -22,13 +22,16 @@ It is a non-goal to build older versions of QEMU.
 
 Pushing any tag starts `.github/workflows/release.yml`. The workflow builds:
 
-- `qemu-linux-amd64-<version>.tar.zst` and `.tar.gz` on `ubuntu-24.04`
-- `qemu-linux-arm64-<version>.tar.zst` and `.tar.gz` on `ubuntu-24.04-arm`
+- `qemu-user-linux-amd64-<target>` binaries, plus `.gz` and `.zst` copies, on `ubuntu-24.04`
+- `qemu-user-linux-arm64-<target>` binaries, plus `.gz` and `.zst` copies, on `ubuntu-24.04-arm`
+- `qemu-user-linux-amd64-<version>.tar.zst` and `.tar.gz` archives containing all amd64 exec binaries
+- `qemu-user-linux-arm64-<version>.tar.zst` and `.tar.gz` archives containing all arm64 exec binaries
 
-Each build uploads its archive and `.sha256` file as workflow artifacts, attests
-them with GitHub artifact attestations, and publishes the attestation bundle as a
-release asset. The final job creates or updates the GitHub release for the tag
-and uploads both architecture archives, checksums, and attestation bundles.
+Each build uploads every binary, compressed binary, archive, and `.sha256` file
+as workflow artifacts, attests them with GitHub artifact attestations, and
+publishes the attestation bundle as a release asset. The final job creates or
+updates the GitHub release for the tag and uploads both architecture artifact
+sets, checksums, and attestation bundles.
 
 The workflow can also be run manually with a `tag_name` input to retry release
 publication for an existing tag.
