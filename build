@@ -51,6 +51,23 @@ RUN git remote add origin "${QEMU_REPO}"
 RUN git fetch --depth=1 origin "${QEMU_REF}"
 RUN git checkout --detach FETCH_HEAD
 
+APPLY_QEMU_PATCHES() {
+    local patch_dir
+    local patch_file
+    for patch_dir in \
+        "/work/patches/qemu/${ARTIFACT_BASE_VERSION}" \
+        "/work/patches/qemu/${ARTIFACT_BASE_VERSION%.*}.x" \
+        "/work/patches/qemu/${ARTIFACT_BASE_VERSION%%.*}.x"; do
+        if [[ -d "${patch_dir}" ]]; then
+            while IFS= read -r patch_file; do
+                RUN git apply "${patch_file}"
+            done < <(find "${patch_dir}" -maxdepth 1 -type f -name "*.patch" | sort)
+        fi
+    done
+}
+
+APPLY_QEMU_PATCHES
+
 QEMU_CONFIGURE_ARGS=()
 case "${ARTIFACT_BASE_VERSION}" in
     6.*)
