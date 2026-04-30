@@ -66,3 +66,4 @@ RUN make "-j$(nproc)" install
 
 WORKDIR /work/artifact
 RUN tar --zstd -cf "${ARTIFACT_BASENAME}.tar.zst" -C /work/dst "${ARTIFACT_BASENAME}"
+RUN tar -czf "${ARTIFACT_BASENAME}.tar.gz" -C /work/dst "${ARTIFACT_BASENAME}"

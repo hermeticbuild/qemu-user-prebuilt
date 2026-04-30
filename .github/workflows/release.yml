@@ -44,8 +44,10 @@ jobs:
         with:
           name: qemu-static-${{ matrix.arch }}
           path: |
-            out/${{ steps.build.outputs.artifact_name }}
-            out/${{ steps.build.outputs.artifact_name }}.sha256
+            out/qemu-linux-${{ matrix.arch }}-*.tar.zst
+            out/qemu-linux-${{ matrix.arch }}-*.tar.zst.sha256
+            out/qemu-linux-${{ matrix.arch }}-*.tar.gz
+            out/qemu-linux-${{ matrix.arch }}-*.tar.gz.sha256
           if-no-files-found: error
 
       - name: Attest release artifact
@@ -53,20 +55,22 @@ jobs:
         uses: actions/attest@281a49d4cbb0a72c9575a50d18f6deb515a11deb # v4
         with:
           subject-path: |
-            out/${{ steps.build.outputs.artifact_name }}
-            out/${{ steps.build.outputs.artifact_name }}.sha256
+            out/qemu-linux-${{ matrix.arch }}-*.tar.zst
+            out/qemu-linux-${{ matrix.arch }}-*.tar.zst.sha256
+            out/qemu-linux-${{ matrix.arch }}-*.tar.gz
+            out/qemu-linux-${{ matrix.arch }}-*.tar.gz.sha256
 
       - name: Normalize attestation bundle filename
         run: |
           mv \
             "${{ steps.attest.outputs.bundle-path }}" \
-            "out/${{ steps.build.outputs.artifact_name }}.attestation.jsonl"
+            "out/${{ steps.build.outputs.attestation_name }}"
 
       - name: Upload attestation bundle artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qemu-static-${{ matrix.arch }}.attestation
-          path: out/${{ steps.build.outputs.artifact_name }}.attestation.jsonl
+          path: out/${{ steps.build.outputs.attestation_name }}
           if-no-files-found: error
 
   publish:

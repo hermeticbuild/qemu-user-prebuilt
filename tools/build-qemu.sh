@@ -36,24 +36,30 @@ docker build \
 docker create --name "${CONTAINER}" "${IMAGE}" true >/dev/null
 docker cp "${CONTAINER}:/work/artifact/." "${OUT_DIR}/"
 
-artifact_count="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-linux-${ARCH}-*.tar.zst" | wc -l | tr -d ' ')"
-if [[ "${artifact_count}" != "1" ]]; then
-    echo "expected exactly one qemu-linux-${ARCH}-*.tar.zst artifact, found ${artifact_count}" >&2
+artifact_count="$(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-linux-${ARCH}-*.tar.zst" -o -name "qemu-linux-${ARCH}-*.tar.gz" \) | wc -l | tr -d ' ')"
+if [[ "${artifact_count}" != "2" ]]; then
+    echo "expected qemu-linux-${ARCH}-*.tar.zst and qemu-linux-${ARCH}-*.tar.gz artifacts, found ${artifact_count}" >&2
     find "${OUT_DIR}" -maxdepth 1 -type f -print >&2
     exit 1
 fi
 
-artifact="$(find "${OUT_DIR}" -maxdepth 1 -type f -name "qemu-linux-${ARCH}-*.tar.zst" | sort | head -n 1)"
+mapfile -t artifacts < <(find "${OUT_DIR}" -maxdepth 1 -type f \( -name "qemu-linux-${ARCH}-*.tar.zst" -o -name "qemu-linux-${ARCH}-*.tar.gz" \) | sort)
 
-if command -v sha256sum >/dev/null 2>&1; then
-    (cd "${OUT_DIR}" && sha256sum "$(basename "${artifact}")" > "$(basename "${artifact}").sha256")
-else
-    (cd "${OUT_DIR}" && shasum -a 256 "$(basename "${artifact}")" > "$(basename "${artifact}").sha256")
-fi
+artifact_names=()
+for artifact in "${artifacts[@]}"; do
+    artifact_name="$(basename "${artifact}")"
+    artifact_names+=("${artifact_name}")
 
-echo "Artifact: ${artifact}"
-echo "Checksum: ${artifact}.sha256"
+    if command -v sha256sum >/dev/null 2>&1; then
+        (cd "${OUT_DIR}" && sha256sum "${artifact_name}" > "${artifact_name}.sha256")
+    else
+        (cd "${OUT_DIR}" && shasum -a 256 "${artifact_name}" > "${artifact_name}.sha256")
+    fi
+
+    echo "Artifact: ${artifact}"
+    echo "Checksum: ${artifact}.sha256"
+done
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-    echo "artifact_name=$(basename "${artifact}")" >> "${GITHUB_OUTPUT}"
+    echo "attestation_name=${artifact_names[0]%.tar.gz}.attestation.jsonl" >> "${GITHUB_OUTPUT}"
 fi
