@@ -20,6 +20,7 @@ RUN apk add\
  samurai\
  perl\
  python3\
+ py3-setuptools\
  gcc\
  libc-dev\
  pkgconf\
