@@ -98,6 +98,9 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-24.04
+    concurrency:
+      group: qemu-static-release-publish
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
