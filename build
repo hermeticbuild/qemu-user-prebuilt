@@ -51,6 +51,13 @@ RUN git remote add origin "${QEMU_REPO}"
 RUN git fetch --depth=1 origin "${QEMU_REF}"
 RUN git checkout --detach FETCH_HEAD
 
+QEMU_CONFIGURE_ARGS=()
+case "${ARTIFACT_BASE_VERSION}" in
+    7.*)
+        QEMU_CONFIGURE_ARGS+=(--extra-cflags=-D_LARGEFILE64_SOURCE)
+        ;;
+esac
+
 WORKDIR "/work/out/${QEMU_BASENAME}"
 RUN "/work/src/${QEMU_BASENAME}/configure" \
     --prefix="/work/dst/${ARTIFACT_BASENAME}" \
@@ -58,7 +65,8 @@ RUN "/work/src/${QEMU_BASENAME}/configure" \
     --disable-system \
     --disable-werror \
     --enable-linux-user \
-    --static
+    --static \
+    "${QEMU_CONFIGURE_ARGS[@]}"
 
 RUN make "-j$(nproc)"
 RUN make "-j$(nproc)" install
